@@ -118,14 +118,14 @@ document.addEventListener("DOMContentLoaded", () => {
         ul.innerHTML = "<li>FAQはまだ登録されていません</li>";
         return;
       }
-      list.forEach((item, idx) => {
+      list.forEach((item) => {
         const li = document.createElement("li");
         li.innerHTML = `
           <div>
             <div class="faq-q">${escapeHtml(item.question)}</div>
             <div class="faq-a">${escapeHtml(item.answer)}</div>
           </div>
-          <button class="btn btn-danger btn-sm" onclick="deleteFAQ(${idx})">削除</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteFAQ(${item.id})">削除</button>
         `;
         ul.appendChild(li);
       });

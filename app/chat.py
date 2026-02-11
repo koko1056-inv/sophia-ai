@@ -1,6 +1,7 @@
-"""Chat module with RAG integration."""
+"""Chat module with RAG integration using Gemini API."""
 
-from openai import OpenAI
+from google import genai
+from google.genai import types
 
 from app.config import settings
 from app.vectorstore import vector_store
@@ -29,21 +30,19 @@ def generate_response(user_message: str) -> str:
             context_parts.append(f"{doc['text']}{source_info}")
         context = "\n\n".join(context_parts)
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-
+    system_instruction = SYSTEM_PROMPT
     if context:
-        messages.append(
-            {
-                "role": "system",
-                "content": f"以下はお客様の質問に関連するナレッジ情報です：\n\n{context}",
-            }
-        )
+        system_instruction += f"\n\n以下はお客様の質問に関連するナレッジ情報です：\n\n{context}"
 
-    messages.append({"role": "user", "content": user_message})
-
-    client = OpenAI(api_key=settings.openai_api_key)
-    response = client.chat.completions.create(
-        model=settings.chat_model, messages=messages, temperature=0.3, max_tokens=1024
+    client = genai.Client(api_key=settings.gemini_api_key)
+    response = client.models.generate_content(
+        model=settings.chat_model,
+        contents=user_message,
+        config=types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            temperature=0.3,
+            max_output_tokens=1024,
+        ),
     )
 
-    return response.choices[0].message.content
+    return response.text

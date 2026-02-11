@@ -1,6 +1,5 @@
 """Main FastAPI application."""
 
-import json
 import os
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile
@@ -18,11 +17,6 @@ app = FastAPI(title=settings.app_title)
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
-
-
-@app.on_event("startup")
-def startup() -> None:
-    vector_store.load()
 
 
 # --- Page Routes ---
@@ -53,13 +47,13 @@ class ChatResponse(BaseModel):
 def chat(req: ChatRequest) -> ChatResponse:
     if not req.message.strip():
         raise HTTPException(status_code=400, detail="メッセージを入力してください")
-    if not settings.openai_api_key:
-        raise HTTPException(status_code=500, detail="OpenAI APIキーが設定されていません")
+    if not settings.gemini_api_key:
+        raise HTTPException(status_code=500, detail="Gemini APIキーが設定されていません")
     response_text = generate_response(req.message)
     return ChatResponse(response=response_text)
 
 
-# --- FAQ API ---
+# --- FAQ API (Supabase) ---
 
 
 class FAQItem(BaseModel):
@@ -67,38 +61,30 @@ class FAQItem(BaseModel):
     answer: str
 
 
+def _get_supabase():
+    return vector_store.supabase
+
+
 @app.get("/api/faq")
 def get_faq() -> list[dict]:
-    if os.path.exists(settings.faq_path):
-        with open(settings.faq_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
+    result = _get_supabase().table("faq").select("*").order("id").execute()
+    return [{"id": r["id"], "question": r["question"], "answer": r["answer"]} for r in (result.data or [])]
 
 
 @app.post("/api/faq")
 def add_faq(item: FAQItem) -> dict:
-    faq_list = []
-    if os.path.exists(settings.faq_path):
-        with open(settings.faq_path, "r", encoding="utf-8") as f:
-            faq_list = json.load(f)
-    faq_list.append({"question": item.question, "answer": item.answer})
-    with open(settings.faq_path, "w", encoding="utf-8") as f:
-        json.dump(faq_list, f, ensure_ascii=False, indent=2)
-    return {"status": "ok", "count": len(faq_list)}
+    _get_supabase().table("faq").insert(
+        {"question": item.question, "answer": item.answer}
+    ).execute()
+    count_result = _get_supabase().table("faq").select("id", count="exact").execute()
+    return {"status": "ok", "count": count_result.count or 0}
 
 
-@app.delete("/api/faq/{index}")
-def delete_faq(index: int) -> dict:
-    if not os.path.exists(settings.faq_path):
-        raise HTTPException(status_code=404, detail="FAQが見つかりません")
-    with open(settings.faq_path, "r", encoding="utf-8") as f:
-        faq_list = json.load(f)
-    if index < 0 or index >= len(faq_list):
-        raise HTTPException(status_code=404, detail="FAQが見つかりません")
-    faq_list.pop(index)
-    with open(settings.faq_path, "w", encoding="utf-8") as f:
-        json.dump(faq_list, f, ensure_ascii=False, indent=2)
-    return {"status": "ok", "count": len(faq_list)}
+@app.delete("/api/faq/{faq_id}")
+def delete_faq(faq_id: int) -> dict:
+    _get_supabase().table("faq").delete().eq("id", faq_id).execute()
+    count_result = _get_supabase().table("faq").select("id", count="exact").execute()
+    return {"status": "ok", "count": count_result.count or 0}
 
 
 # --- Knowledge API ---

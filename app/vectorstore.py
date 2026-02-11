@@ -1,46 +1,40 @@
-"""Simple vector store using numpy and cosine similarity."""
+"""Vector store using Supabase pgvector + Gemini Embeddings."""
 
-import json
-import os
 from typing import Optional
 
-import numpy as np
-from openai import OpenAI
+from google import genai
+from supabase import create_client, Client
 
 from app.config import settings
 
 
 class VectorStore:
     def __init__(self) -> None:
-        self.documents: list[dict] = []  # {"text": str, "embedding": list[float], "source": str}
-        self.client: Optional[OpenAI] = None
-        self._store_path = os.path.join(settings.vectorstore_path, "store.json")
+        self._supabase: Optional[Client] = None
+        self._genai_client: Optional[genai.Client] = None
 
-    def _get_client(self) -> OpenAI:
-        if self.client is None:
-            self.client = OpenAI(api_key=settings.openai_api_key)
-        return self.client
+    @property
+    def supabase(self) -> Client:
+        if self._supabase is None:
+            self._supabase = create_client(settings.supabase_url, settings.supabase_key)
+        return self._supabase
+
+    @property
+    def genai_client(self) -> genai.Client:
+        if self._genai_client is None:
+            self._genai_client = genai.Client(api_key=settings.gemini_api_key)
+        return self._genai_client
 
     def _get_embedding(self, text: str) -> list[float]:
-        response = self._get_client().embeddings.create(
-            input=text, model=settings.embedding_model
+        result = self.genai_client.models.embed_content(
+            model=settings.embedding_model,
+            contents=text,
         )
-        return response.data[0].embedding
-
-    def add_document(self, text: str, source: str = "") -> None:
-        chunks = self._split_text(text)
-        for chunk in chunks:
-            embedding = self._get_embedding(chunk)
-            self.documents.append(
-                {"text": chunk, "embedding": embedding, "source": source}
-            )
-        self.save()
+        return result.embeddings[0].values
 
     def _split_text(self, text: str) -> list[str]:
-        """Split text into chunks with overlap."""
         if len(text) <= settings.chunk_size:
             return [text]
-
         chunks = []
         start = 0
         while start < len(text):
@@ -51,44 +45,39 @@ class VectorStore:
             start = end - settings.chunk_overlap
         return chunks
 
+    def add_document(self, text: str, source: str = "") -> None:
+        chunks = self._split_text(text)
+        for chunk in chunks:
+            embedding = self._get_embedding(chunk)
+            self.supabase.table("documents").insert(
+                {"content": chunk, "source": source, "embedding": embedding}
+            ).execute()
+
     def search(self, query: str, top_k: Optional[int] = None) -> list[dict]:
-        if not self.documents:
-            return []
-
         k = top_k or settings.top_k
-        query_embedding = np.array(self._get_embedding(query))
+        query_embedding = self._get_embedding(query)
 
-        results = []
-        for doc in self.documents:
-            doc_embedding = np.array(doc["embedding"])
-            similarity = np.dot(query_embedding, doc_embedding) / (
-                np.linalg.norm(query_embedding) * np.linalg.norm(doc_embedding)
-            )
-            results.append(
-                {"text": doc["text"], "source": doc["source"], "score": float(similarity)}
-            )
+        result = self.supabase.rpc(
+            "match_documents",
+            {"query_embedding": query_embedding, "match_count": k},
+        ).execute()
 
-        results.sort(key=lambda x: x["score"], reverse=True)
-        return results[:k]
-
-    def save(self) -> None:
-        os.makedirs(os.path.dirname(self._store_path), exist_ok=True)
-        with open(self._store_path, "w", encoding="utf-8") as f:
-            json.dump(self.documents, f, ensure_ascii=False)
-
-    def load(self) -> None:
-        if os.path.exists(self._store_path):
-            with open(self._store_path, "r", encoding="utf-8") as f:
-                self.documents = json.load(f)
+        return [
+            {"text": row["content"], "source": row["source"], "score": row["similarity"]}
+            for row in (result.data or [])
+        ]
 
     def clear(self) -> None:
-        self.documents = []
-        if os.path.exists(self._store_path):
-            os.remove(self._store_path)
+        self.supabase.table("documents").delete().neq("id", 0).execute()
 
     @property
     def document_count(self) -> int:
-        return len(self.documents)
+        result = self.supabase.table("documents").select("id", count="exact").execute()
+        return result.count or 0
+
+    def load(self) -> None:
+        """No-op: Supabase persists data automatically."""
+        pass
 
 
 vector_store = VectorStore()

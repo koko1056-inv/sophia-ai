@@ -1,22 +1,13 @@
-import os
-
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    openai_api_key: str = ""
+    gemini_api_key: str = ""
+    supabase_url: str = ""
+    supabase_key: str = ""
     app_title: str = "株式会社ソフィア AIチャットボット"
-    knowledge_dir: str = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "data", "knowledge"
-    )
-    vectorstore_path: str = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "data", "vectorstore"
-    )
-    faq_path: str = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "data", "faq.json"
-    )
-    embedding_model: str = "text-embedding-3-small"
-    chat_model: str = "gpt-4o-mini"
+    embedding_model: str = "text-embedding-004"
+    chat_model: str = "gemini-2.0-flash"
     chunk_size: int = 500
     chunk_overlap: int = 50
     top_k: int = 3

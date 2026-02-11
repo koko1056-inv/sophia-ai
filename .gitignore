@@ -7,5 +7,3 @@ build/
 .env
 venv/
 .venv/
-data/vectorstore/
-*.pkl
