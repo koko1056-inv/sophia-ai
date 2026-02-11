@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>株式会社ソフィア - AIチャットボット</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <h1>株式会社ソフィア</h1>
+      <p>AIチャットサポート</p>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+      <div class="typing-indicator" id="typing-indicator">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div class="faq-section" id="faq-section" style="display:none;">
+      <p>よくある質問</p>
+      <div class="faq-buttons" id="faq-buttons"></div>
+    </div>
+
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" placeholder="メッセージを入力..." autocomplete="off">
+      <button id="send-btn" aria-label="送信">&#9654;</button>
+    </div>
+  </div>
+
+  <script src="/static/js/chat.js"></script>
+</body>
+</html>

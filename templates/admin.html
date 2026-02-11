@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理画面 - ソフィアAIチャットボット</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="admin-container">
+    <div class="admin-header">
+      <h1>ソフィアAIチャットボット 管理画面</h1>
+      <p>ナレッジとFAQの管理</p>
+      <a href="/">&larr; チャット画面に戻る</a>
+    </div>
+
+    <!-- Knowledge Status -->
+    <div class="admin-section">
+      <h2>ナレッジ状態</h2>
+      <div class="status-bar" id="knowledge-status">読み込み中...</div>
+      <button class="btn btn-danger" id="clear-knowledge-btn">すべてのナレッジを削除</button>
+    </div>
+
+    <!-- Add Knowledge (Text) -->
+    <div class="admin-section">
+      <h2>ナレッジ登録（テキスト）</h2>
+      <form id="knowledge-text-form">
+        <div class="form-group">
+          <label for="k-title">タイトル</label>
+          <input type="text" id="k-title" placeholder="例: 会社概要" required>
+        </div>
+        <div class="form-group">
+          <label for="k-content">内容</label>
+          <textarea id="k-content" placeholder="ナレッジの内容を入力..." required></textarea>
+        </div>
+        <button type="submit" class="btn">登録</button>
+      </form>
+    </div>
+
+    <!-- Add Knowledge (File) -->
+    <div class="admin-section">
+      <h2>ナレッジ登録（ファイル）</h2>
+      <form id="knowledge-file-form">
+        <div class="form-group">
+          <label for="k-file">テキストファイル (.txt)</label>
+          <input type="file" id="k-file" accept=".txt" required>
+        </div>
+        <button type="submit" class="btn">アップロード</button>
+      </form>
+    </div>
+
+    <!-- FAQ Management -->
+    <div class="admin-section">
+      <h2>よくある質問（FAQ）管理</h2>
+      <form id="faq-form" style="margin-bottom: 16px;">
+        <div class="form-group">
+          <label for="faq-question">質問</label>
+          <input type="text" id="faq-question" placeholder="例: 営業時間は？" required>
+        </div>
+        <div class="form-group">
+          <label for="faq-answer">回答</label>
+          <textarea id="faq-answer" placeholder="質問に対する回答..." required></textarea>
+        </div>
+        <button type="submit" class="btn">FAQ追加</button>
+      </form>
+      <h3 style="font-size:14px; margin-bottom:8px;">登録済みFAQ</h3>
+      <ul class="faq-list" id="faq-list">
+        <li>読み込み中...</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/static/js/admin.js"></script>
+</body>
+</html>
